@@ -5,6 +5,7 @@ compatibility_date = "2026-10-04"
 [vars]
 CORS_ORIGINS = "http://localhost:5173"
 SHOPIFY_API_VERSION = "2026-10"
+SOLANA_RPC_URL = "https://api.devnet.solana.com"
 
 [[d1_databases]]
 binding = "DB"
@@ -21,6 +22,7 @@ name = "0x-shopify-api"
 [env.production.vars]
 CORS_ORIGINS = "https://0x-shopify-storefront-public.vercel.app"
 SHOPIFY_API_VERSION = "2026-10"
+SOLANA_RPC_URL = "https://api.devnet.solana.com"
 
 [[env.production.d1_databases]]
 binding = "DB"

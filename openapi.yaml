@@ -61,6 +61,27 @@ paths:
           schema: { type: string }
       responses:
         '200': { description: Updated Shopify cart }
+  /v1/carts/{cartId}/delivery-address:
+    post:
+      description: Replaces the one-time delivery address used by Shopify to calculate delivery options and totals.
+      parameters:
+        - in: path
+          name: cartId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Cart with Shopify delivery groups }
+        '400': { description: Invalid delivery address }
+  /v1/carts/{cartId}/delivery-options:
+    post:
+      description: Selects a Shopify delivery option for each returned delivery group.
+      parameters:
+        - in: path
+          name: cartId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Cart with updated Shopify total }
   /v1/crypto/{resource}:
     get:
       parameters:

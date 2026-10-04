@@ -8,6 +8,7 @@ export interface ShopifyCart {
   totalQuantity: number;
   cost: { totalAmount: { amount: string; currencyCode: string } };
   lines: { nodes: Array<{ id: string; quantity: number; merchandise: { id: string; title: string; product: { handle: string; title: string } } }> };
+  deliveryGroups: { nodes: Array<{ id: string; deliveryOptions: Array<{ handle: string; title: string; description?: string | null; estimatedCost: { amount: string; currencyCode: string } }>; selectedDeliveryOption?: { handle: string } | null }> };
 }
 
 interface CartMutationResult { cart?: ShopifyCart | null; userErrors: Array<{ field?: string[] | null; message: string }>; }
@@ -36,7 +37,7 @@ export const CAMPAIGN_MEDIA_IDS = [
 
 export const CAMPAIGN_MEDIA_QUERY = `query CampaignMedia($ids: [ID!]!) { nodes(ids: $ids) { ... on MediaImage { image { url altText } } } }`;
 
-const CART_FIELDS = `id checkoutUrl totalQuantity cost { totalAmount { amount currencyCode } } lines(first: 100) { nodes { id quantity merchandise { ... on ProductVariant { id title product { handle title } } } } }`;
+const CART_FIELDS = `id checkoutUrl totalQuantity cost { totalAmount { amount currencyCode } } lines(first: 100) { nodes { id quantity merchandise { ... on ProductVariant { id title product { handle title } } } } } deliveryGroups(first: 10) { nodes { id deliveryOptions { handle title description estimatedCost { amount currencyCode } } selectedDeliveryOption { handle } } }`;
 
 function cartFromResult(result: CartMutationResult): ShopifyCart {
   if (result.userErrors.length) throw new PublicError('SHOPIFY_CART_REJECTED', result.userErrors[0].message, 422);
@@ -63,4 +64,14 @@ export async function addCartLines(config: Config, cartId: string, lines: Array<
 export async function updateCartLine(config: Config, cartId: string, lineId: string, quantity: number): Promise<ShopifyCart> {
   const data = await storefront<{ cartLinesUpdate: CartMutationResult }>(config, `mutation CartLinesUpdate($cartId: ID!, $lines: [CartLineUpdateInput!]!) { cartLinesUpdate(cartId: $cartId, lines: $lines) { cart { ${CART_FIELDS} } userErrors { field message } } }`, { cartId, lines: [{ id: lineId, quantity }] });
   return cartFromResult(data.cartLinesUpdate);
+}
+
+export async function replaceCartDeliveryAddress(config: Config, cartId: string, address: Record<string, string>): Promise<ShopifyCart> {
+  const data = await storefront<{ cartDeliveryAddressesReplace: CartMutationResult }>(config, `mutation CartDeliveryAddressesReplace($cartId: ID!, $addresses: [CartSelectableAddressInput!]!) { cartDeliveryAddressesReplace(cartId: $cartId, addresses: $addresses) { cart { ${CART_FIELDS} } userErrors { field message } } }`, { cartId, addresses: [{ selected: true, oneTimeUse: true, address: { deliveryAddress: address } }] });
+  return cartFromResult(data.cartDeliveryAddressesReplace);
+}
+
+export async function selectCartDeliveryOptions(config: Config, cartId: string, selectedDeliveryOptions: Array<{ deliveryGroupId: string; deliveryOptionHandle: string }>): Promise<ShopifyCart> {
+  const data = await storefront<{ cartSelectedDeliveryOptionsUpdate: CartMutationResult }>(config, `mutation CartSelectedDeliveryOptionsUpdate($cartId: ID!, $selectedDeliveryOptions: [CartSelectedDeliveryOptionInput!]!) { cartSelectedDeliveryOptionsUpdate(cartId: $cartId, selectedDeliveryOptions: $selectedDeliveryOptions) { cart { ${CART_FIELDS} } userErrors { field message } } }`, { cartId, selectedDeliveryOptions });
+  return cartFromResult(data.cartSelectedDeliveryOptionsUpdate);
 }

@@ -1,6 +1,6 @@
 {
   "name": "0x-shopify-worker-api",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "description": "0x Shopify portfolio API on Cloudflare Workers",
   "type": "module",

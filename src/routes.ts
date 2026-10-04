@@ -1,13 +1,13 @@
 import { Config, Env, PublicError } from './config';
 import { error, success } from './http';
-import { addCartLines, CAMPAIGN_MEDIA_IDS, CAMPAIGN_MEDIA_QUERY, createCart, getCart, PRODUCTS_QUERY, storefront, updateCartLine } from './shopify';
+import { addCartLines, CAMPAIGN_MEDIA_IDS, CAMPAIGN_MEDIA_QUERY, createCart, getCart, PRODUCTS_QUERY, replaceCartDeliveryAddress, selectCartDeliveryOptions, storefront, updateCartLine } from './shopify';
 import { API_VERSION } from './version';
 
 export async function route(request: Request, _env: Env, config: Config, id: string, origin?: string): Promise<Response> {
   const path = new URL(request.url).pathname;
   if (request.method === 'GET' && path === '/health') return success({ service: '0x-shopify-api', version: API_VERSION, mode: 'testnet-demo' }, id, origin);
-  if (request.method === 'GET' && path === '/ready') return success({ shopifyConfigured: Boolean(config.shopifyStoreDomain && config.storefrontToken), solanaRecipientConfigured: Boolean(config.solanaUsdcRecipient), cryptoEnabled: false }, id, origin);
-  if (request.method === 'GET' && path === '/v1/status') return success({ version: API_VERSION, mode: 'testnet-demo', crypto: 'disabled-awaiting-solana-rpc-demo-product-and-shopify-admin' }, id, origin);
+  if (request.method === 'GET' && path === '/ready') return success({ shopifyConfigured: Boolean(config.shopifyStoreDomain && config.storefrontToken), solanaRecipientConfigured: Boolean(config.solanaUsdcRecipient), solanaRpcConfigured: Boolean(config.solanaRpcUrl), cryptoEnabled: false }, id, origin);
+  if (request.method === 'GET' && path === '/v1/status') return success({ version: API_VERSION, mode: 'testnet-demo', crypto: 'disabled-awaiting-demo-product-and-shopify-admin' }, id, origin);
   if (request.method === 'GET' && path === '/v1/products') { const data = await storefront<{ products: { nodes: unknown[] } }>(config, PRODUCTS_QUERY, { first: 24 }); return success({ products: data.products.nodes }, id, origin, { source: 'shopify' }); }
   if (request.method === 'GET' && path === '/v1/campaign-media') {
     const data = await storefront<{ nodes: Array<{ image?: { url: string; altText?: string | null } | null } | null> }>(config, CAMPAIGN_MEDIA_QUERY, { ids: CAMPAIGN_MEDIA_IDS });
@@ -29,6 +29,16 @@ export async function route(request: Request, _env: Env, config: Config, id: str
   if (request.method === 'POST' && cartLinesMatch) {
     const body = await requestBody(request);
     return success({ cart: await addCartLines(config, decodeURIComponent(cartLinesMatch[1]), cartLines(body)) }, id, origin, { source: 'shopify' });
+  }
+  const deliveryAddressMatch = path.match(/^\/v1\/carts\/(gid%3A%2F%2Fshopify%2FCart%2F[^/]+|gid:\/\/shopify\/Cart\/[^/]+)\/delivery-address$/i);
+  if (request.method === 'POST' && deliveryAddressMatch) {
+    const body = await requestBody(request);
+    return success({ cart: await replaceCartDeliveryAddress(config, decodeURIComponent(deliveryAddressMatch[1]), deliveryAddress(body)) }, id, origin, { source: 'shopify' });
+  }
+  const deliveryOptionsMatch = path.match(/^\/v1\/carts\/(gid%3A%2F%2Fshopify%2FCart%2F[^/]+|gid:\/\/shopify\/Cart\/[^/]+)\/delivery-options$/i);
+  if (request.method === 'POST' && deliveryOptionsMatch) {
+    const body = await requestBody(request);
+    return success({ cart: await selectCartDeliveryOptions(config, decodeURIComponent(deliveryOptionsMatch[1]), deliveryOptions(body)) }, id, origin, { source: 'shopify' });
   }
   const cartLineMatch = path.match(/^\/v1\/carts\/(gid%3A%2F%2Fshopify%2FCart%2F[^/]+|gid:\/\/shopify\/Cart\/[^/]+)\/lines\/(gid%3A%2F%2Fshopify%2FCartLine%2F[^/]+|gid:\/\/shopify\/CartLine\/[^/]+)$/i);
   if (request.method === 'POST' && cartLineMatch) {
@@ -61,4 +71,29 @@ function quantity(body: unknown): number {
   const value = (body as { quantity?: unknown }).quantity;
   if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 100) throw new PublicError('INVALID_REQUEST', 'Quantity must be an integer from 0 to 100.', 400);
   return value;
+}
+
+function deliveryAddress(body: unknown): Record<string, string> {
+  if (!body || typeof body !== 'object') throw new PublicError('INVALID_REQUEST', 'A delivery address is required.', 400);
+  const input = body as Record<string, unknown>;
+  const required = ['firstName', 'lastName', 'address1', 'city', 'zip', 'countryCode'] as const;
+  const address: Record<string, string> = {};
+  for (const key of required) {
+    const value = input[key];
+    if (typeof value !== 'string' || !value.trim() || value.length > 100) throw new PublicError('INVALID_REQUEST', `Delivery address ${key} is required.`, 400);
+    address[key] = value.trim();
+  }
+  if (!/^[A-Z]{2}$/.test(address.countryCode)) throw new PublicError('INVALID_REQUEST', 'Delivery address countryCode must be a two-letter uppercase code.', 400);
+  for (const key of ['address2', 'provinceCode'] as const) if (typeof input[key] === 'string' && input[key].trim()) address[key] = input[key].trim();
+  return address;
+}
+
+function deliveryOptions(body: unknown): Array<{ deliveryGroupId: string; deliveryOptionHandle: string }> {
+  if (!body || typeof body !== 'object' || !Array.isArray((body as { options?: unknown }).options) || !(body as { options: unknown[] }).options.length || (body as { options: unknown[] }).options.length > 10) throw new PublicError('INVALID_REQUEST', 'At least one delivery option is required.', 400);
+  return (body as { options: unknown[] }).options.map((option) => {
+    if (!option || typeof option !== 'object') throw new PublicError('INVALID_REQUEST', 'Delivery options must be objects.', 400);
+    const { deliveryGroupId, deliveryOptionHandle } = option as { deliveryGroupId?: unknown; deliveryOptionHandle?: unknown };
+    if (typeof deliveryGroupId !== 'string' || !deliveryGroupId.startsWith('gid://shopify/CartDeliveryGroup/') || typeof deliveryOptionHandle !== 'string' || !deliveryOptionHandle || deliveryOptionHandle.length > 255) throw new PublicError('INVALID_REQUEST', 'Delivery option is invalid.', 400);
+    return { deliveryGroupId, deliveryOptionHandle };
+  });
 }
