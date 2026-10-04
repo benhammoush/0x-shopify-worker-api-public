@@ -19,7 +19,7 @@ npx wrangler d1 migrations apply 0x-demo --local
 npm run dev
 ```
 
-Set `SHOPIFY_STORE_DOMAIN` and `SHOPIFY_STOREFRONT_TOKEN` in `.dev.vars`. Replace the placeholder D1 IDs and production CORS origin before deployment.
+Set `SHOPIFY_STORE_DOMAIN` and the private Headless Storefront API token in `SHOPIFY_STOREFRONT_TOKEN` within `.dev.vars`. Replace the placeholder D1 IDs and production CORS origin before deployment.
 
 ## Verification
 
