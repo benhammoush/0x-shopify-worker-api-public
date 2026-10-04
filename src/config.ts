@@ -3,6 +3,7 @@ export interface Env {
   SHOPIFY_API_VERSION?: string;
   SHOPIFY_STORE_DOMAIN?: string;
   SHOPIFY_STOREFRONT_TOKEN?: string;
+  SOLANA_USDC_RECIPIENT?: string;
   DB: D1Database;
 }
 
@@ -11,12 +12,15 @@ export interface Config {
   shopifyApiVersion: string;
   shopifyStoreDomain?: string;
   storefrontToken?: string;
+  solanaUsdcRecipient?: string;
 }
 
 export function getConfig(env: Env): Config {
   const shopifyStoreDomain = env.SHOPIFY_STORE_DOMAIN?.trim().toLowerCase();
+  const solanaUsdcRecipient = env.SOLANA_USDC_RECIPIENT?.trim();
   if (shopifyStoreDomain && !/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shopifyStoreDomain)) throw new Error('SHOPIFY_STORE_DOMAIN must be a valid myshopify.com domain.');
-  return { corsOrigins: (env.CORS_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean), shopifyApiVersion: env.SHOPIFY_API_VERSION || '2026-10', shopifyStoreDomain, storefrontToken: env.SHOPIFY_STOREFRONT_TOKEN?.trim() };
+  if (solanaUsdcRecipient && !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(solanaUsdcRecipient)) throw new Error('SOLANA_USDC_RECIPIENT must be a valid Solana public key.');
+  return { corsOrigins: (env.CORS_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean), shopifyApiVersion: env.SHOPIFY_API_VERSION || '2026-10', shopifyStoreDomain, storefrontToken: env.SHOPIFY_STOREFRONT_TOKEN?.trim(), solanaUsdcRecipient };
 }
 
 export function assertStorefrontConfigured(config: Config): asserts config is Config & Required<Pick<Config, 'shopifyStoreDomain' | 'storefrontToken'>> {

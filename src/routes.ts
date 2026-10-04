@@ -6,8 +6,8 @@ import { API_VERSION } from './version';
 export async function route(request: Request, _env: Env, config: Config, id: string, origin?: string): Promise<Response> {
   const path = new URL(request.url).pathname;
   if (request.method === 'GET' && path === '/health') return success({ service: '0x-shopify-api', version: API_VERSION, mode: 'testnet-demo' }, id, origin);
-  if (request.method === 'GET' && path === '/ready') return success({ shopifyConfigured: Boolean(config.shopifyStoreDomain && config.storefrontToken), cryptoEnabled: false }, id, origin);
-  if (request.method === 'GET' && path === '/v1/status') return success({ version: API_VERSION, mode: 'testnet-demo', crypto: 'disabled-pending-approved-specification' }, id, origin);
+  if (request.method === 'GET' && path === '/ready') return success({ shopifyConfigured: Boolean(config.shopifyStoreDomain && config.storefrontToken), solanaRecipientConfigured: Boolean(config.solanaUsdcRecipient), cryptoEnabled: false }, id, origin);
+  if (request.method === 'GET' && path === '/v1/status') return success({ version: API_VERSION, mode: 'testnet-demo', crypto: 'disabled-awaiting-solana-rpc-demo-product-and-shopify-admin' }, id, origin);
   if (request.method === 'GET' && path === '/v1/products') { const data = await storefront<{ products: { nodes: unknown[] } }>(config, PRODUCTS_QUERY, { first: 24 }); return success({ products: data.products.nodes }, id, origin, { source: 'shopify' }); }
   if (request.method === 'GET' && path === '/v1/campaign-media') {
     const data = await storefront<{ nodes: Array<{ image?: { url: string; altText?: string | null } | null } | null> }>(config, CAMPAIGN_MEDIA_QUERY, { ids: CAMPAIGN_MEDIA_IDS });

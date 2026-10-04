@@ -1,3 +1,4 @@
 # Do not commit this file as .dev.vars.
 SHOPIFY_STORE_DOMAIN=your-development-store.myshopify.com
 SHOPIFY_STOREFRONT_TOKEN=replace-with-storefront-token
+SOLANA_USDC_RECIPIENT=replace-with-dedicated-solana-devnet-public-key
