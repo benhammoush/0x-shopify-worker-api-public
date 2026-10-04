@@ -1,0 +1,20 @@
+{
+  "name": "0x-shopify-worker-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "0x Shopify portfolio API on Cloudflare Workers",
+  "type": "module",
+  "engines": { "node": "24.x" },
+  "scripts": {
+    "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "wrangler deploy --dry-run --env production"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261004.1",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3",
+    "wrangler": "^4.39.0"
+  }
+}

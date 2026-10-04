@@ -1,0 +1,33 @@
+openapi: 3.1.0
+info:
+  title: 0x Shopify Worker API
+  version: 0.1.0
+  description: Testnet-only portfolio API. It is not a Shopify-approved payment integration.
+paths:
+  /health:
+    get:
+      responses:
+        '200': { description: Worker is running }
+  /ready:
+    get:
+      responses:
+        '200': { description: Shopify configuration status }
+  /v1/status:
+    get:
+      responses:
+        '200': { description: API and crypto-demo status }
+  /v1/products:
+    get:
+      responses:
+        '200': { description: Shopify catalog products }
+        '503': { description: Shopify is not configured }
+        '502': { description: Shopify is unavailable }
+  /v1/crypto/{resource}:
+    get:
+      parameters:
+        - in: path
+          name: resource
+          required: true
+          schema: { type: string }
+      responses:
+        '503': { description: Crypto is intentionally disabled pending approved testnet rules }

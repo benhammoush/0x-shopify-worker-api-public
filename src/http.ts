@@ -1,0 +1,4 @@
+export function requestId(request: Request): string { return request.headers.get('cf-ray') || crypto.randomUUID(); }
+export function json(body: unknown, status: number, id: string, origin?: string): Response { const headers = new Headers({ 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-request-id': id }); if (origin) headers.set('access-control-allow-origin', origin); return new Response(JSON.stringify(body), { status, headers }); }
+export function success(data: unknown, id: string, origin?: string, meta: Record<string, unknown> = {}): Response { return json({ data, meta: { requestId: id, ...meta } }, 200, id, origin); }
+export function error(code: string, message: string, status: number, id: string, origin?: string): Response { return json({ error: { code, message, requestId: id } }, status, id, origin); }

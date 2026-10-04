@@ -1,0 +1,28 @@
+name = "0x-shopify-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-04"
+
+[vars]
+CORS_ORIGINS = "http://localhost:5173"
+SHOPIFY_API_VERSION = "2026-10"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "0x-demo"
+database_id = "replace-with-your-d1-database-id"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[env.production]
+name = "0x-shopify-api"
+
+[env.production.vars]
+CORS_ORIGINS = "https://replace-with-your-storefront.example"
+SHOPIFY_API_VERSION = "2026-10"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "0x-demo"
+database_id = "replace-with-your-d1-database-id"
