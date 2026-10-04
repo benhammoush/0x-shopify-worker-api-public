@@ -19,7 +19,7 @@ crons = ["*/5 * * * *"]
 name = "0x-shopify-api"
 
 [env.production.vars]
-CORS_ORIGINS = "https://replace-with-your-storefront.example"
+CORS_ORIGINS = "https://0x-shopify-storefront-public.vercel.app"
 SHOPIFY_API_VERSION = "2026-10"
 
 [[env.production.d1_databases]]
