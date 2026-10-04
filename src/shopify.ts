@@ -17,3 +17,11 @@ export async function storefront<T>(config: Config, query: string, variables: Re
 }
 
 export const PRODUCTS_QUERY = `query Products($first: Int!) { products(first: $first) { nodes { id handle title description availableForSale featuredImage { url altText } priceRange { minVariantPrice { amount currencyCode } } variants(first: 20) { nodes { id title availableForSale price { amount currencyCode } } } } } }`;
+
+export const CAMPAIGN_MEDIA_IDS = [
+  'gid://shopify/MediaImage/45490250154288',
+  'gid://shopify/MediaImage/45490250055984',
+  'gid://shopify/MediaImage/45490250023216',
+] as const;
+
+export const CAMPAIGN_MEDIA_QUERY = `query CampaignMedia($ids: [ID!]!) { nodes(ids: $ids) { ... on MediaImage { image { url altText } } } }`;
