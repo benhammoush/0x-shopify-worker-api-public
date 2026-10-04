@@ -12,8 +12,12 @@ export async function route(request: Request, _env: Env, config: Config, id: str
   if (request.method === 'GET' && path === '/v1/campaign-media') {
     const data = await storefront<{ nodes: Array<{ image?: { url: string; altText?: string | null } | null } | null> }>(config, CAMPAIGN_MEDIA_QUERY, { ids: CAMPAIGN_MEDIA_IDS });
     const images = data.nodes.map((node) => node?.image).filter((image): image is { url: string; altText?: string | null } => Boolean(image?.url));
-    if (images.length !== CAMPAIGN_MEDIA_IDS.length) throw new PublicError('CAMPAIGN_MEDIA_UNAVAILABLE', 'Campaign images could not be loaded.', 502);
-    return success({ main: images[0], alt1: images[1], alt2: images[2] }, id, origin, { source: 'shopify' });
+    const byAlt = new Map(images.map((image) => [image.altText?.trim().toLowerCase(), image]));
+    const main = byAlt.get('main');
+    const alt1 = byAlt.get('alt 1');
+    const alt2 = byAlt.get('alt 2');
+    if (!main || !alt1 || !alt2) throw new PublicError('CAMPAIGN_MEDIA_UNAVAILABLE', 'Campaign images could not be loaded.', 502);
+    return success({ main, alt1, alt2 }, id, origin, { source: 'shopify' });
   }
   if (path.startsWith('/v1/crypto/')) return error('CRYPTO_DISABLED', 'Crypto checkout is disabled until its testnet payment specification is approved.', 503, id, origin);
   throw new PublicError('NOT_FOUND', 'The requested resource was not found.', 404);
