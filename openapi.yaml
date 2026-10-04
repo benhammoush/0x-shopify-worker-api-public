@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: 0x Shopify Worker API
-  version: 0.1.0
+  version: 0.2.0
   description: Testnet-only portfolio API. It is not a Shopify-approved payment integration.
 paths:
   /health:
@@ -22,6 +22,45 @@ paths:
         '200': { description: Shopify catalog products }
         '503': { description: Shopify is not configured }
         '502': { description: Shopify is unavailable }
+  /v1/carts:
+    post:
+      description: Creates a Shopify cart from validated product-variant lines.
+      responses:
+        '200': { description: Shopify cart and development-store checkout URL }
+        '400': { description: Invalid cart line request }
+        '422': { description: Shopify rejected the cart }
+  /v1/carts/{cartId}:
+    get:
+      parameters:
+        - in: path
+          name: cartId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Shopify cart }
+        '404': { description: Cart not found }
+  /v1/carts/{cartId}/lines:
+    post:
+      parameters:
+        - in: path
+          name: cartId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Updated Shopify cart }
+  /v1/carts/{cartId}/lines/{lineId}:
+    post:
+      parameters:
+        - in: path
+          name: cartId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: lineId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Updated Shopify cart }
   /v1/crypto/{resource}:
     get:
       parameters:

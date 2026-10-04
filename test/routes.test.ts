@@ -13,4 +13,20 @@ describe('0x Worker', () => {
     const response = await worker.fetch(new Request('https://example.test/v1/campaign-media'), configuredEnv);
     await expect(response.json()).resolves.toMatchObject({ data: { main: { url: 'https://cdn.shopify.com/main.jpg' }, alt1: { url: 'https://cdn.shopify.com/alt-1.jpg' }, alt2: { url: 'https://cdn.shopify.com/alt-2.jpg' } } });
   });
+  it('creates carts only from validated Shopify product variants', async () => {
+    const cart = { id: 'gid://shopify/Cart/cart-1', checkoutUrl: 'https://shop.test/cart', totalQuantity: 1, cost: { totalAmount: { amount: '10.00', currencyCode: 'USD' } }, lines: { nodes: [] } };
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { cartCreate: { cart, userErrors: [] } } }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const response = await worker.fetch(new Request('https://example.test/v1/carts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ lines: [{ merchandiseId: 'gid://shopify/ProductVariant/1', quantity: 1 }] }) }), configuredEnv);
+    await expect(response.json()).resolves.toMatchObject({ data: { cart } });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+  it('rejects malformed cart creation requests before Shopify is called', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const response = await worker.fetch(new Request('https://example.test/v1/carts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ lines: [{ merchandiseId: 'not-a-variant', quantity: 1 }] }) }), configuredEnv);
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: 'INVALID_REQUEST' } });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
