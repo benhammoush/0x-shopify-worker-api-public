@@ -2,12 +2,13 @@ import { Config, Env, PublicError } from './config';
 import { error, success } from './http';
 import { addCartLines, CAMPAIGN_MEDIA_IDS, CAMPAIGN_MEDIA_QUERY, createCart, getCart, PRODUCTS_QUERY, replaceCartDeliveryAddress, selectCartDeliveryOptions, storefront, updateCartLine } from './shopify';
 import { API_VERSION } from './version';
+import { createIntent, verifyIntent } from './payments';
 
 export async function route(request: Request, _env: Env, config: Config, id: string, origin?: string): Promise<Response> {
   const path = new URL(request.url).pathname;
   if (request.method === 'GET' && path === '/health') return success({ service: '0x-shopify-api', version: API_VERSION, mode: 'testnet-demo' }, id, origin);
-  if (request.method === 'GET' && path === '/ready') return success({ shopifyConfigured: Boolean(config.shopifyStoreDomain && config.storefrontToken), solanaRecipientConfigured: Boolean(config.solanaUsdcRecipient), solanaRpcConfigured: Boolean(config.solanaRpcUrl), cryptoEnabled: false }, id, origin);
-  if (request.method === 'GET' && path === '/v1/status') return success({ version: API_VERSION, mode: 'testnet-demo', crypto: 'disabled-awaiting-demo-product-and-shopify-admin' }, id, origin);
+  if (request.method === 'GET' && path === '/ready') return success({ shopifyConfigured: Boolean(config.shopifyStoreDomain && config.storefrontToken), solanaRecipientConfigured: Boolean(config.solanaUsdcRecipient), solanaRpcConfigured: Boolean(config.solanaRpcUrl), cryptoEnabled: Boolean(config.solanaUsdcRecipient && config.shopifyAdminClientId && config.shopifyAdminClientSecret) }, id, origin);
+  if (request.method === 'GET' && path === '/v1/status') return success({ version: API_VERSION, mode: 'testnet-demo', crypto: config.solanaUsdcRecipient && config.shopifyAdminClientId && config.shopifyAdminClientSecret ? 'enabled-testnet-only' : 'disabled-awaiting-shopify-admin-credentials' }, id, origin);
   if (request.method === 'GET' && path === '/v1/products') { const data = await storefront<{ products: { nodes: unknown[] } }>(config, PRODUCTS_QUERY, { first: 24 }); return success({ products: data.products.nodes }, id, origin, { source: 'shopify' }); }
   if (request.method === 'GET' && path === '/v1/campaign-media') {
     const data = await storefront<{ nodes: Array<{ image?: { url: string; altText?: string | null } | null } | null> }>(config, CAMPAIGN_MEDIA_QUERY, { ids: CAMPAIGN_MEDIA_IDS });
@@ -45,7 +46,10 @@ export async function route(request: Request, _env: Env, config: Config, id: str
     const body = await requestBody(request);
     return success({ cart: await updateCartLine(config, decodeURIComponent(cartLineMatch[1]), decodeURIComponent(cartLineMatch[2]), quantity(body)) }, id, origin, { source: 'shopify' });
   }
-  if (path.startsWith('/v1/crypto/')) return error('CRYPTO_DISABLED', 'Crypto checkout is disabled until the Solana recipient and Shopify Admin configuration are set.', 503, id, origin);
+  if (request.method === 'POST' && path === '/v1/crypto/intents') { const body = await requestBody(request); return success({ intent: await createIntent(config, _env.DB, cartId(body)) }, id, origin); }
+  const intentMatch = path.match(/^\/v1\/crypto\/intents\/([0-9a-f-]{36})\/verify$/i);
+  if (request.method === 'POST' && intentMatch) { const body = await requestBody(request); return success(await verifyIntent(config, _env.DB, intentMatch[1], signature(body)), id, origin); }
+  if (path.startsWith('/v1/crypto/')) return error('CRYPTO_DISABLED', 'Crypto checkout is disabled until its configuration is complete.', 503, id, origin);
   throw new PublicError('NOT_FOUND', 'The requested resource was not found.', 404);
 }
 
@@ -97,3 +101,6 @@ function deliveryOptions(body: unknown): Array<{ deliveryGroupId: string; delive
     return { deliveryGroupId, deliveryOptionHandle };
   });
 }
+
+function cartId(body: unknown): string { const value = body && typeof body === 'object' ? (body as { cartId?: unknown }).cartId : undefined; if (typeof value !== 'string' || !value.startsWith('gid://shopify/Cart/')) throw new PublicError('INVALID_REQUEST', 'A Shopify cart ID is required.', 400); return value; }
+function signature(body: unknown): string { const value = body && typeof body === 'object' ? (body as { signature?: unknown }).signature : undefined; if (typeof value !== 'string') throw new PublicError('INVALID_REQUEST', 'A transaction signature is required.', 400); return value; }

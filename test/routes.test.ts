@@ -30,6 +30,11 @@ describe('0x Worker', () => {
     await expect(response.json()).resolves.toMatchObject({ error: { code: 'INVALID_REQUEST' } });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+  it('does not issue a crypto intent without Worker-only Shopify Admin credentials', async () => {
+    const response = await worker.fetch(new Request('https://example.test/v1/crypto/intents', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ cartId: 'gid://shopify/Cart/cart-1' }) }), configuredEnv);
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: 'CRYPTO_NOT_CONFIGURED' } });
+  });
   it('sends validated delivery addresses to Shopify', async () => {
     const cart = { id: 'gid://shopify/Cart/cart-1', checkoutUrl: 'https://shop.test/cart', totalQuantity: 1, cost: { totalAmount: { amount: '10.00', currencyCode: 'USD' } }, lines: { nodes: [] }, deliveryGroups: { nodes: [] } };
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { cartDeliveryAddressesReplace: { cart, userErrors: [] } } }), { status: 200 }));
