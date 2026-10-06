@@ -1,13 +1,14 @@
 # 0x Shopify Worker API
 
-Cloudflare Worker API for the 0x Shopify portfolio storefront. It provides a stable public contract over Shopify Storefront API calls and establishes the secure boundary for a future testnet-only crypto demonstration.
+Cloudflare Worker API for the 0x Shopify portfolio storefront. It provides a stable public contract over Shopify Storefront API calls and a testnet-only native-SOL payment demonstration.
 
 ## Security Boundary
 
 - The browser never receives Shopify Admin credentials.
 - The Worker is the only component that calls Shopify.
 - D1 is reserved for idempotent payment-intent and webhook records.
-- Crypto routes are disabled until their exact testnet token, conversion, expiry, and confirmation rules are approved and tested.
+- The Worker locks a Jupiter SOL/USD reference quote, converts the canonical Shopify USD total upward to lamports, and verifies finalized native Devnet SOL transfers.
+- `SOLANA_RECIPIENT`, `JUPITER_API_KEY`, and Shopify Admin credentials are Worker-only configuration. Crypto routes remain disabled until all are configured.
 - This is not Shopify Payments or a Shopify-approved payment integration.
 
 ## Local Setup
@@ -19,7 +20,7 @@ npx wrangler d1 migrations apply 0x-demo --local
 npm run dev
 ```
 
-Set `SHOPIFY_STORE_DOMAIN` and the private Headless Storefront API token in `SHOPIFY_STOREFRONT_TOKEN` within `.dev.vars`. Replace the placeholder D1 IDs and production CORS origin before deployment.
+Set `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_STOREFRONT_TOKEN`, `SOLANA_RECIPIENT`, `JUPITER_API_KEY`, and Shopify Admin credentials in `.dev.vars`. Apply all D1 migrations before running locally. Replace the placeholder D1 IDs and production CORS origin before deployment.
 
 ## Verification
 

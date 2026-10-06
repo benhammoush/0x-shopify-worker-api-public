@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: 0x Shopify Worker API
-  version: 0.4.0
+  version: 0.5.0
   description: Testnet-only portfolio API. It is not a Shopify-approved payment integration.
 paths:
   /health:
@@ -93,13 +93,13 @@ paths:
         '503': { description: Crypto is intentionally disabled pending approved testnet rules }
   /v1/crypto/intents:
     post:
-      description: Issues immutable Solana Devnet test-USDC terms from a delivery-ready Shopify cart.
+      description: Issues immutable native-SOL Devnet terms from a delivery-ready Shopify cart using a locked Jupiter SOL/USD reference quote.
       responses:
-        '200': { description: Payment intent with exact raw USDC amount }
+        '200': { description: Payment intent with exact lamport amount }
         '422': { description: Cart does not have a selected delivery option }
   /v1/crypto/intents/{intentId}/verify:
     post:
-      description: Verifies a finalized Solana USDC transfer then creates a pending Shopify test order once.
+      description: Verifies a finalized native Solana transfer then creates a pending Shopify test order once.
       parameters:
         - in: path
           name: intentId
